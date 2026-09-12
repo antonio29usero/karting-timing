@@ -233,10 +233,6 @@ function normalizeDriverColor(color) {
     return 'neutral';
 }
 
-function getDriverId(driver) {
-    return `${driver?.dorsal ?? 'unknown'}`;
-}
-
 function getNumericMetric(driver, keys) {
     for (const key of keys) {
         const value = Number(driver?.[key] ?? 0);
@@ -267,19 +263,20 @@ function getRankColor(rank) {
 
 function calculateMetricRanks(drivers, metricGetter) {
     const rankedDrivers = drivers
-        .map(driver => ({ id: getDriverId(driver), value: metricGetter(driver) }))
+        .map(entry => ({ id: entry.rankId, value: metricGetter(entry.driver) }))
         .filter(entry => entry.value > 0)
         .sort((left, right) => left.value - right.value);
 
     return new Map(rankedDrivers.map((entry, index) => [entry.id, index + 1]));
 }
 
-function resolveTrackDriverColor(driver, averageRanks, bestLapRanks) {
+function resolveTrackDriverColor(driverEntry, averageRanks, bestLapRanks) {
+    const { driver, rankId } = driverEntry;
     const backendColor = normalizeDriverColor(driver?.color);
     if (backendColor !== 'neutral') return backendColor;
 
-    const averageColor = getRankColor(averageRanks.get(getDriverId(driver)));
-    const bestLapColor = getRankColor(bestLapRanks.get(getDriverId(driver)));
+    const averageColor = getRankColor(averageRanks.get(rankId));
+    const bestLapColor = getRankColor(bestLapRanks.get(rankId));
     const severity = { neutral: 99, red: 3, orange: 2, green: 1 };
 
     return severity[averageColor] < severity[bestLapColor] ? averageColor : bestLapColor;
@@ -323,20 +320,22 @@ function renderDrivers(drivers) {
         return;
     }
 
-    const trackDrivers = drivers.filter(driver => !driver?.en_pit);
+    const driverEntries = drivers.map((driver, index) => ({ driver, rankId: `${driver?.dorsal ?? 'unknown'}-${index}` }));
+    const trackDrivers = driverEntries.filter(entry => !entry.driver?.en_pit);
     const averageRanks = calculateMetricRanks(trackDrivers, getAverageStint);
     const bestLapRanks = calculateMetricRanks(trackDrivers, getBestLap);
     
     let html = '';
-    drivers.forEach(driver => {
+    driverEntries.forEach(driverEntry => {
+        const { driver, rankId } = driverEntry;
         const status = driver.en_pit ? '🔴 EN PIT' : '🟢 EN PISTA';
         const statusClass = driver.en_pit ? 'pit' : 'pista';
         const driverColor = driver.en_pit
             ? normalizeDriverColor(driver.frozen_color || driver.color)
-            : resolveTrackDriverColor(driver, averageRanks, bestLapRanks);
+            : resolveTrackDriverColor(driverEntry, averageRanks, bestLapRanks);
         const bestLapColor = driver.en_pit
             ? driverColor
-            : getRankColor(bestLapRanks.get(getDriverId(driver)));
+            : getRankColor(bestLapRanks.get(rankId));
         const driverStyles = getColorStyles(driverColor);
         const bestLapStyles = getColorStyles(bestLapColor);
         const bestLap = getBestLap(driver);
