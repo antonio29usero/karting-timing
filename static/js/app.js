@@ -225,6 +225,37 @@ async function refreshState() {
 
 // ==================== DRIVERS RENDERING ====================
 
+function normalizePerformanceColor(color) {
+    return ['green', 'orange', 'red'].includes(color) ? color : 'neutral';
+}
+
+function getRankingPositionMap(drivers, key) {
+    const sorted = [...drivers].sort((a, b) => {
+        const valueA = Number.isFinite(Number(a[key])) && Number(a[key]) > 0 ? Number(a[key]) : Number.POSITIVE_INFINITY;
+        const valueB = Number.isFinite(Number(b[key])) && Number(b[key]) > 0 ? Number(b[key]) : Number.POSITIVE_INFINITY;
+        return valueA - valueB;
+    });
+
+    const positionByDorsal = new Map();
+    sorted.forEach((driver, index) => {
+        positionByDorsal.set(String(driver.dorsal), index + 1);
+    });
+    return positionByDorsal;
+}
+
+function calculateTrackColor(driver, mediaRanking, mejorRanking) {
+    const mediaPos = mediaRanking.get(String(driver.dorsal)) ?? Number.POSITIVE_INFINITY;
+    const mejorPos = mejorRanking.get(String(driver.dorsal)) ?? Number.POSITIVE_INFINITY;
+
+    const isTop7Media = mediaPos <= 7;
+    const isTop7Mejor = mejorPos <= 7;
+
+    if (isTop7Media && isTop7Mejor) return 'green';
+    if (mediaPos >= 15 || mejorPos >= 15) return 'red';
+    if ((mediaPos >= 7 && mediaPos <= 14) || (mejorPos >= 7 && mejorPos <= 14)) return 'orange';
+    return 'neutral';
+}
+
 function renderDrivers(drivers) {
     const container = document.getElementById('drivers-list');
     if (!container) return;
@@ -234,13 +265,20 @@ function renderDrivers(drivers) {
         return;
     }
     
+    const driversOnTrack = drivers.filter(driver => !driver.en_pit);
+    const mediaRanking = getRankingPositionMap(driversOnTrack, 'media');
+    const mejorRanking = getRankingPositionMap(driversOnTrack, 'mejor');
+
     let html = '';
     drivers.forEach(driver => {
         const status = driver.en_pit ? '🔴 EN PIT' : '🟢 EN PISTA';
         const statusClass = driver.en_pit ? 'pit' : 'pista';
+        const performanceColor = driver.en_pit
+            ? normalizePerformanceColor(driver.color)
+            : calculateTrackColor(driver, mediaRanking, mejorRanking);
         
         html += `
-            <div class="driver-card">
+            <div class="driver-card color-${performanceColor}">
                 <h4>#${driver.dorsal} - ${driver.equipo}</h4>
                 <div class="driver-info">
                     <span class="label">Vueltas:</span>
