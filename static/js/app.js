@@ -268,7 +268,7 @@ function getStintLapCount(driver) {
         if (Number.isInteger(directCount) && directCount >= 0) return directCount;
     }
 
-    const fallbackCount = Number(driver?.stint_lap_count ?? 0);
+    const fallbackCount = Number(driver?.stint_lap_count ?? driver?.stint ?? 0);
     return Number.isInteger(fallbackCount) && fallbackCount >= 0 ? fallbackCount : 0;
 }
 
