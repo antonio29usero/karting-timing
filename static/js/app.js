@@ -461,25 +461,41 @@ function formatLapTime(value) {
     if (value === null || value === undefined || value === '') return '—';
 
     let sign = '';
-    let numericValue = value;
+    let seconds = value;
 
     if (typeof value === 'string') {
         const trimmed = value.trim();
         if (!trimmed || trimmed === '—') return '—';
 
-        if (/^[+-]?\d{2}:\d{2}:\d{3}$/.test(trimmed)) return trimmed;
-
-        if (trimmed.startsWith('+') || trimmed.startsWith('-')) {
-            sign = trimmed[0];
-            numericValue = trimmed.slice(1);
-        } else {
-            numericValue = trimmed;
+        let raw = trimmed;
+        if (raw.startsWith('+') || raw.startsWith('-')) {
+            sign = raw[0];
+            raw = raw.slice(1).trim();
         }
 
-        numericValue = numericValue.replace(/s$/i, '').replace(',', '.').trim();
+        // Ya formateado como MM:SS:MS (acepta 1+ dígitos de minutos para normalizar padding)
+        let match = raw.match(/^(\d+):([0-5]?\d):(\d{1,3})$/);
+        if (match) {
+            const minutes = Number(match[1]);
+            const secs = Number(match[2]);
+            const ms = Number(match[3].padEnd(3, '0'));
+            return `${sign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Formato cronometrado habitual MM:SS.mmm o M:SS
+        match = raw.match(/^(\d+):([0-5]?\d)(?:[.,](\d{1,3}))?$/);
+        if (match) {
+            const minutes = Number(match[1]);
+            const secs = Number(match[2]);
+            const ms = Number((match[3] || '0').padEnd(3, '0'));
+            seconds = minutes * 60 + secs + (ms / 1000);
+        } else {
+            const numericValue = raw.replace(/s$/i, '').replace(',', '.').trim();
+            seconds = Number(numericValue);
+            if (!Number.isFinite(seconds)) return value;
+        }
     }
 
-    const seconds = Number(numericValue);
     if (!Number.isFinite(seconds)) return value;
 
     const totalMs = Math.round(Math.abs(seconds) * 1000);
