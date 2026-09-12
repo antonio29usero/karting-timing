@@ -459,6 +459,7 @@ async function addPenalty() {
 
 function formatLapTime(value) {
     if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'number' && value === 0) return '—';
 
     let sign = '';
     let seconds = value;
@@ -478,7 +479,7 @@ function formatLapTime(value) {
         if (match) {
             const minutes = Number(match[1]);
             const secs = Number(match[2]);
-            const ms = Number(match[3].padEnd(3, '0'));
+            const ms = Number(match[3].padStart(3, '0'));
             return `${sign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
         }
 
@@ -493,6 +494,7 @@ function formatLapTime(value) {
             const numericValue = raw.replace(/s$/i, '').replace(',', '.').trim();
             seconds = Number(numericValue);
             if (!Number.isFinite(seconds)) return '—';
+            if (seconds === 0) return '—';
         }
     }
 
