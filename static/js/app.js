@@ -229,16 +229,25 @@ function normalizePerformanceColor(color) {
     return ['green', 'orange', 'red'].includes(color) ? color : 'neutral';
 }
 
+function getMetricValue(driver, key) {
+    const value = Number(driver[key]);
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
+
 function getRankingPositionMap(drivers, key) {
-    const sorted = [...drivers].sort((a, b) => {
-        const valueA = Number.isFinite(Number(a[key])) && Number(a[key]) > 0 ? Number(a[key]) : Number.POSITIVE_INFINITY;
-        const valueB = Number.isFinite(Number(b[key])) && Number(b[key]) > 0 ? Number(b[key]) : Number.POSITIVE_INFINITY;
-        return valueA - valueB;
-    });
+    const sorted = drivers
+        .map(driver => ({ driver, value: getMetricValue(driver, key) }))
+        .filter(entry => entry.value !== null)
+        .sort((a, b) => a.value - b.value);
 
     const positionByDorsal = new Map();
-    sorted.forEach((driver, index) => {
-        positionByDorsal.set(String(driver.dorsal), index + 1);
+    let lastValue = null;
+    let lastRank = null;
+    sorted.forEach((entry, index) => {
+        const rank = entry.value === lastValue ? lastRank : index + 1;
+        positionByDorsal.set(String(entry.driver.dorsal), rank);
+        lastValue = entry.value;
+        lastRank = rank;
     });
     return positionByDorsal;
 }
