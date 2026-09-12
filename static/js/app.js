@@ -362,8 +362,8 @@ async function refreshRealpos() {
                     <td>${driver.penalty_seconds > 0 ? '+' + driver.penalty_seconds.toFixed(1) + 's' : '—'}</td>
                     <td>${driver.penalty_laps > 0 ? '+' + driver.penalty_laps : '—'}</td>
                     <td>${formatLapTime(driver.time_proj)}</td>
-                    <td>${formatLapTime(driver.interval_display)}</td>
-                    <td>${formatLapTime(driver.gap_display)}</td>
+                    <td>${formatGapOrInterval(driver.interval_display)}</td>
+                    <td>${formatGapOrInterval(driver.gap_display)}</td>
                 </tr>
             `;
         });
@@ -408,7 +408,7 @@ async function refreshSummary() {
                         <td>${driver.pos}</td>
                         <td><strong>${driver.dorsal}</strong></td>
                         <td>${driver.equipo}</td>
-                        <td>${formatLapTime(driver.interval_display)}</td>
+                        <td>${formatGapOrInterval(driver.interval_display)}</td>
                     </tr>
                 `;
             });
@@ -505,6 +505,27 @@ function formatLapTime(value) {
 
     const effectiveSign = sign || (seconds < 0 ? '-' : '');
     return `${effectiveSign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+}
+
+function formatGapOrInterval(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === '—') return '—';
+        if (/^[+-]?\d+\s*(l|lap|laps|v|vuelta|vueltas)$/i.test(trimmed)) {
+            return escapeHtml(trimmed);
+        }
+    }
+    return formatLapTime(value);
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function showAlert(message, type) {
