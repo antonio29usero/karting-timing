@@ -225,6 +225,95 @@ async function refreshState() {
 
 // ==================== DRIVERS RENDERING ====================
 
+function normalizeDriverColor(color) {
+    const normalized = (color || '').toString().trim().toLowerCase();
+    if (normalized === 'green' || normalized === 'orange' || normalized === 'red' || normalized === 'neutral') {
+        return normalized;
+    }
+    return 'neutral';
+}
+
+function getDriverId(driver) {
+    return `${driver?.dorsal ?? 'unknown'}`;
+}
+
+function getNumericMetric(driver, keys) {
+    for (const key of keys) {
+        const value = Number(driver?.[key] ?? 0);
+        if (value > 0) return value;
+    }
+    return 0;
+}
+
+function getBestLap(driver) {
+    return getNumericMetric(driver, ['mejor_vuelta', 'best_lap', 'mejor']);
+}
+
+function getAverageStint(driver) {
+    return getNumericMetric(driver, ['media_stint', 'media_vuelta', 'media']);
+}
+
+function getStintLapCount(driver) {
+    if (Array.isArray(driver?.stint_laps)) return driver.stint_laps.length;
+    return Number(driver?.stint_laps ?? driver?.stint_lap_count ?? 0);
+}
+
+function getRankColor(rank) {
+    if (!rank) return 'neutral';
+    if (rank <= 7) return 'green';
+    if (rank <= 14) return 'orange';
+    return 'red';
+}
+
+function calculateMetricRanks(drivers, metricGetter) {
+    const rankedDrivers = drivers
+        .map(driver => ({ id: getDriverId(driver), value: metricGetter(driver) }))
+        .filter(entry => entry.value > 0)
+        .sort((left, right) => left.value - right.value);
+
+    return new Map(rankedDrivers.map((entry, index) => [entry.id, index + 1]));
+}
+
+function resolveTrackDriverColor(driver, averageRanks, bestLapRanks) {
+    const backendColor = normalizeDriverColor(driver?.color);
+    if (backendColor !== 'neutral') return backendColor;
+
+    const averageColor = getRankColor(averageRanks.get(getDriverId(driver)));
+    const bestLapColor = getRankColor(bestLapRanks.get(getDriverId(driver)));
+    const severity = { neutral: 99, red: 3, orange: 2, green: 1 };
+
+    return severity[averageColor] < severity[bestLapColor] ? averageColor : bestLapColor;
+}
+
+function getColorStyles(color) {
+    if (color === 'green') {
+        return {
+            cardBorder: 'rgba(81, 207, 102, 0.7)',
+            cardBackground: 'rgba(81, 207, 102, 0.12)',
+            valueColor: '#51cf66'
+        };
+    }
+    if (color === 'orange') {
+        return {
+            cardBorder: 'rgba(255, 212, 59, 0.7)',
+            cardBackground: 'rgba(255, 212, 59, 0.12)',
+            valueColor: '#ffd43b'
+        };
+    }
+    if (color === 'red') {
+        return {
+            cardBorder: 'rgba(255, 107, 107, 0.7)',
+            cardBackground: 'rgba(255, 107, 107, 0.12)',
+            valueColor: '#ff8787'
+        };
+    }
+    return {
+        cardBorder: 'rgba(255,255,255,0.1)',
+        cardBackground: 'rgba(0,0,0,0.3)',
+        valueColor: '#4dabf7'
+    };
+}
+
 function renderDrivers(drivers) {
     const container = document.getElementById('drivers-list');
     if (!container) return;
@@ -233,14 +322,29 @@ function renderDrivers(drivers) {
         container.innerHTML = '<p style="text-align:center;grid-column:1/-1">👥 Sin drivers</p>';
         return;
     }
+
+    const trackDrivers = drivers.filter(driver => !driver?.en_pit);
+    const averageRanks = calculateMetricRanks(trackDrivers, getAverageStint);
+    const bestLapRanks = calculateMetricRanks(trackDrivers, getBestLap);
     
     let html = '';
     drivers.forEach(driver => {
         const status = driver.en_pit ? '🔴 EN PIT' : '🟢 EN PISTA';
         const statusClass = driver.en_pit ? 'pit' : 'pista';
+        const driverColor = driver.en_pit
+            ? normalizeDriverColor(driver.frozen_color || driver.color)
+            : resolveTrackDriverColor(driver, averageRanks, bestLapRanks);
+        const bestLapColor = driver.en_pit
+            ? driverColor
+            : getRankColor(bestLapRanks.get(getDriverId(driver)));
+        const driverStyles = getColorStyles(driverColor);
+        const bestLapStyles = getColorStyles(bestLapColor);
+        const bestLap = getBestLap(driver);
+        const average = getAverageStint(driver);
+        const stintLaps = getStintLapCount(driver);
         
         html += `
-            <div class="driver-card">
+            <div class="driver-card" style="border-color:${driverStyles.cardBorder};background:${driverStyles.cardBackground};">
                 <h4>#${driver.dorsal} - ${driver.equipo}</h4>
                 <div class="driver-info">
                     <span class="label">Vueltas:</span>
@@ -248,15 +352,15 @@ function renderDrivers(drivers) {
                 </div>
                 <div class="driver-info">
                     <span class="label">Mejor:</span>
-                    <span class="value">${formatTime(driver.mejor)}</span>
+                    <span class="value" style="color:${bestLapStyles.valueColor}">${formatTime(bestLap)}</span>
                 </div>
                 <div class="driver-info">
                     <span class="label">Media:</span>
-                    <span class="value">${formatTime(driver.media)}</span>
+                    <span class="value" style="color:${driverStyles.valueColor}">${formatTime(average)}</span>
                 </div>
                 <div class="driver-info">
                     <span class="label">Stint:</span>
-                    <span class="value">${driver.stint_laps} vueltas</span>
+                    <span class="value">${stintLaps} vueltas</span>
                 </div>
                 <div class="driver-info">
                     <span class="label">Boxes:</span>
