@@ -253,7 +253,11 @@ function getAverageStint(driver) {
 
 function getStintLapCount(driver) {
     if (Array.isArray(driver?.stint_laps)) return driver.stint_laps.length;
-    return Number(driver?.stint_laps ?? driver?.stint_lap_count ?? 0);
+    const directCount = Number(driver?.stint_laps);
+    if (Number.isFinite(directCount)) return directCount;
+
+    const fallbackCount = Number(driver?.stint_lap_count ?? 0);
+    return Number.isFinite(fallbackCount) ? fallbackCount : 0;
 }
 
 function getRankColor(rank) {
@@ -288,9 +292,9 @@ function resolveTrackDriverColor(driverEntry, averageRanks, bestLapRanks) {
     const { rankId } = driverEntry;
     const averageColor = getRankColor(averageRanks.get(rankId));
     const bestLapColor = getRankColor(bestLapRanks.get(rankId));
-    const severity = { neutral: 99, red: 3, orange: 2, green: 1 };
+    const severity = { neutral: 0, green: 1, orange: 2, red: 3 };
 
-    return severity[averageColor] < severity[bestLapColor] ? averageColor : bestLapColor;
+    return severity[averageColor] > severity[bestLapColor] ? averageColor : bestLapColor;
 }
 
 function getColorStyles(color) {
