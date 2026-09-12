@@ -492,11 +492,11 @@ function formatLapTime(value) {
         } else {
             const numericValue = raw.replace(/s$/i, '').replace(',', '.').trim();
             seconds = Number(numericValue);
-            if (!Number.isFinite(seconds)) return value;
+            if (!Number.isFinite(seconds)) return '—';
         }
     }
 
-    if (!Number.isFinite(seconds)) return value;
+    if (!Number.isFinite(seconds)) return '—';
 
     const totalMs = Math.round(Math.abs(seconds) * 1000);
     const minutes = Math.floor(totalMs / 60000);
