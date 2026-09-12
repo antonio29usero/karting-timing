@@ -253,15 +253,15 @@ function getRankingPositionMap(drivers, key) {
 }
 
 function calculateTrackColor(driver, mediaRanking, mejorRanking) {
-    const mediaPos = mediaRanking.get(String(driver.dorsal)) ?? Number.POSITIVE_INFINITY;
-    const mejorPos = mejorRanking.get(String(driver.dorsal)) ?? Number.POSITIVE_INFINITY;
+    const mediaPos = mediaRanking.get(String(driver.dorsal)) ?? null;
+    const mejorPos = mejorRanking.get(String(driver.dorsal)) ?? null;
 
-    const isTop7Media = mediaPos <= 7;
-    const isTop7Mejor = mejorPos <= 7;
+    const isTop7Media = mediaPos !== null && mediaPos <= 7;
+    const isTop7Mejor = mejorPos !== null && mejorPos <= 7;
 
     if (isTop7Media && isTop7Mejor) return 'green';
-    if (mediaPos >= 15 || mejorPos >= 15) return 'red';
-    if ((mediaPos >= 8 && mediaPos <= 14) || (mejorPos >= 8 && mejorPos <= 14)) return 'orange';
+    if ((mediaPos !== null && mediaPos >= 15) || (mejorPos !== null && mejorPos >= 15)) return 'red';
+    if ((mediaPos !== null && mediaPos >= 8 && mediaPos <= 14) || (mejorPos !== null && mejorPos >= 8 && mejorPos <= 14)) return 'orange';
     return 'neutral';
 }
 
