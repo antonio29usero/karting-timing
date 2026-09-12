@@ -253,8 +253,11 @@ function getAverageStint(driver) {
 
 function getStintLapCount(driver) {
     if (Array.isArray(driver?.stint_laps)) return driver.stint_laps.length;
-    const directCount = Number(driver?.stint_laps);
-    if (Number.isFinite(directCount)) return directCount;
+    const directValue = driver?.stint_laps;
+    if (directValue !== null && directValue !== undefined && directValue !== '') {
+        const directCount = Number(directValue);
+        if (Number.isFinite(directCount)) return directCount;
+    }
 
     const fallbackCount = Number(driver?.stint_lap_count ?? 0);
     return Number.isFinite(fallbackCount) ? fallbackCount : 0;
