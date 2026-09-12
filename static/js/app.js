@@ -28,7 +28,6 @@ async function loadConfig() {
         
         if (data.initialized) {
             updateStatus('Inicializado ✅', 'green');
-            document.querySelector('.tab-btn').click();
         } else {
             updateStatus('No inicializado ❌', 'red');
         }
@@ -103,7 +102,6 @@ async function addLapManual() {
     }
     
     try {
-        // Primero, agregar la vuelta
         const response = await fetch(API_URL + '/api/add-lap', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -122,6 +120,8 @@ async function addLapManual() {
             document.getElementById('manual_lap_time').value = '';
             document.getElementById('manual_laps_count').value = '';
             refreshDrivers();
+            refreshRealpos();
+            refreshSummary();
         } else {
             showAlert('❌ Error al agregar vuelta', 'error');
         }
@@ -150,6 +150,7 @@ async function pitIn() {
         showAlert(`🔴 PIT IN: ${dorsal}`, 'info');
         document.getElementById('pit_control_dorsal').value = '';
         refreshDrivers();
+        refreshSummary();
     } catch (error) {
         console.error('Error:', error);
         showAlert('❌ Error en PIT IN', 'error');
@@ -175,6 +176,7 @@ async function pitOut() {
         showAlert(`🟢 PIT OUT: ${dorsal}`, 'info');
         document.getElementById('pit_control_dorsal').value = '';
         refreshDrivers();
+        refreshSummary();
     } catch (error) {
         console.error('Error:', error);
         showAlert('❌ Error en PIT OUT', 'error');
@@ -206,6 +208,7 @@ async function addPenalty() {
             document.getElementById('penalty_laps').value = '';
             document.getElementById('penalty_reason').value = '';
             refreshRealpos();
+            refreshSummary();
         } else {
             showAlert('❌ Error al agregar penalización', 'error');
         }
@@ -388,5 +391,8 @@ function showAlert(message, type) {
 
 window.addEventListener('load', () => {
     loadConfig();
-    setInterval(loadConfig, 5000); // Actualizar estado cada 5s
+    setInterval(loadConfig, 5000);
+    setInterval(refreshRealpos, 2000);
+    setInterval(refreshSummary, 2000);
+    setInterval(refreshDrivers, 2000);
 });
