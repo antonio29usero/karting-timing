@@ -225,6 +225,54 @@ async function refreshState() {
 
 // ==================== DRIVERS RENDERING ====================
 
+function normalizePerformanceColor(color) {
+    return ['green', 'orange', 'red'].includes(color) ? color : 'neutral';
+}
+
+function getMetricValue(driver, key) {
+    const value = Number(driver[key]);
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function getRankingPositionMap(drivers, key) {
+    const sorted = drivers
+        .map(driver => ({ driver, value: getMetricValue(driver, key) }))
+        .filter(entry => entry.value !== null)
+        .sort((a, b) => a.value - b.value);
+
+    const positionByDorsal = new Map();
+    let lastValue = null;
+    let lastRank = null;
+    sorted.forEach((entry, index) => {
+        const rank = entry.value === lastValue ? lastRank : index + 1;
+        positionByDorsal.set(String(entry.driver.dorsal), rank);
+        lastValue = entry.value;
+        lastRank = rank;
+    });
+    return positionByDorsal;
+}
+
+function calculateTrackColor(driver, mediaRanking, mejorRanking) {
+    const mediaPos = mediaRanking.get(String(driver.dorsal)) ?? null;
+    const mejorPos = mejorRanking.get(String(driver.dorsal)) ?? null;
+
+    const getPositionBand = (position) => {
+        if (position === null) return 'none';
+        if (position <= 7) return 'top';
+        if (position >= 15) return 'low';
+        if (position >= 8 && position <= 14) return 'mid';
+        return 'none';
+    };
+
+    const mediaBand = getPositionBand(mediaPos);
+    const mejorBand = getPositionBand(mejorPos);
+
+    if (mediaBand === 'top' && mejorBand === 'top') return 'green';
+    if (mediaBand === 'low' || mejorBand === 'low') return 'red';
+    if (mediaBand === 'mid' || mejorBand === 'mid') return 'orange';
+    return 'neutral';
+}
+
 function renderDrivers(drivers) {
     const container = document.getElementById('drivers-list');
     if (!container) return;
@@ -234,13 +282,20 @@ function renderDrivers(drivers) {
         return;
     }
     
+    const driversOnTrack = drivers.filter(driver => !driver.en_pit);
+    const mediaRanking = getRankingPositionMap(driversOnTrack, 'media');
+    const mejorRanking = getRankingPositionMap(driversOnTrack, 'mejor');
+
     let html = '';
     drivers.forEach(driver => {
         const status = driver.en_pit ? '🔴 EN PIT' : '🟢 EN PISTA';
         const statusClass = driver.en_pit ? 'pit' : 'pista';
+        const performanceColor = driver.en_pit
+            ? normalizePerformanceColor(driver.color)
+            : calculateTrackColor(driver, mediaRanking, mejorRanking);
         
         html += `
-            <div class="driver-card">
+            <div class="driver-card color-${performanceColor}">
                 <h4>#${driver.dorsal} - ${driver.equipo}</h4>
                 <div class="driver-info">
                     <span class="label">Vueltas:</span>

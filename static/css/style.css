@@ -309,6 +309,21 @@ body {
     transition: all 0.3s ease;
 }
 
+.driver-card.color-green {
+    border-color: rgba(81,207,102,0.9);
+    box-shadow: inset 0 0 0 1px rgba(81,207,102,0.2);
+}
+
+.driver-card.color-orange {
+    border-color: rgba(255, 212, 59, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 212, 59, 0.2);
+}
+
+.driver-card.color-red {
+    border-color: rgba(255,107,107,0.9);
+    box-shadow: inset 0 0 0 1px rgba(255,107,107,0.2);
+}
+
 .driver-card:hover {
     border-color: #ff6b6b;
     box-shadow: 0 0 15px rgba(255,107,107,0.2);
