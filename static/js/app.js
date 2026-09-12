@@ -243,6 +243,15 @@ function getNumericMetric(driver, keys) {
     return 0;
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
 function getBestLap(driver) {
     return getNumericMetric(driver, ['mejor_vuelta', 'best_lap', 'mejor']);
 }
@@ -256,11 +265,11 @@ function getStintLapCount(driver) {
     const directValue = driver?.stint_laps;
     if (directValue !== null && directValue !== undefined && directValue !== '') {
         const directCount = Number(directValue);
-        if (Number.isFinite(directCount)) return directCount;
+        if (Number.isInteger(directCount) && directCount >= 0) return directCount;
     }
 
     const fallbackCount = Number(driver?.stint_lap_count ?? 0);
-    return Number.isFinite(fallbackCount) ? fallbackCount : 0;
+    return Number.isInteger(fallbackCount) && fallbackCount >= 0 ? fallbackCount : 0;
 }
 
 function getRankColor(rank) {
@@ -359,10 +368,12 @@ function renderDrivers(drivers) {
         const bestLap = getBestLap(driver);
         const average = getAverageStint(driver);
         const stintLaps = getStintLapCount(driver);
+        const dorsal = escapeHtml(driver.dorsal);
+        const equipo = escapeHtml(driver.equipo);
         
         html += `
             <div class="driver-card" style="border-color:${driverStyles.cardBorder};background:${driverStyles.cardBackground};">
-                <h4>#${driver.dorsal} - ${driver.equipo}</h4>
+                <h4>#${dorsal} - ${equipo}</h4>
                 <div class="driver-info">
                     <span class="label">Vueltas:</span>
                     <span class="value">${driver.laps_count}</span>
