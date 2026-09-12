@@ -252,7 +252,7 @@ function calculateTrackColor(driver, mediaRanking, mejorRanking) {
 
     if (isTop7Media && isTop7Mejor) return 'green';
     if (mediaPos >= 15 || mejorPos >= 15) return 'red';
-    if ((mediaPos >= 7 && mediaPos <= 14) || (mejorPos >= 7 && mejorPos <= 14)) return 'orange';
+    if ((mediaPos >= 8 && mediaPos <= 14) || (mejorPos >= 8 && mejorPos <= 14)) return 'orange';
     return 'neutral';
 }
 
