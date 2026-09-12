@@ -4,6 +4,8 @@ const API_URL = 'http://' + window.location.hostname + ':5000';
 let currentTab = 'track';
 let selectedCircuit = '';
 let selectedMode = '';
+const DRIVER_COLOR_GREEN_CUTOFF = 7;
+const DRIVER_COLOR_ORANGE_CUTOFF = 14;
 
 // ==================== CIRCUIT SELECTION ====================
 
@@ -256,8 +258,8 @@ function getStintLapCount(driver) {
 
 function getRankColor(rank) {
     if (!rank) return 'neutral';
-    if (rank <= 7) return 'green';
-    if (rank <= 14) return 'orange';
+    if (rank <= DRIVER_COLOR_GREEN_CUTOFF) return 'green';
+    if (rank <= DRIVER_COLOR_ORANGE_CUTOFF) return 'orange';
     return 'red';
 }
 
