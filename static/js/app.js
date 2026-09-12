@@ -269,14 +269,23 @@ function calculateMetricRanks(drivers, metricGetter) {
         .filter(entry => entry.value > 0)
         .sort((left, right) => left.value - right.value);
 
-    return new Map(rankedDrivers.map((entry, index) => [entry.id, index + 1]));
+    const ranks = new Map();
+    let lastValue = null;
+    let lastRank = 0;
+
+    rankedDrivers.forEach((entry, index) => {
+        if (entry.value !== lastValue) {
+            lastValue = entry.value;
+            lastRank = index + 1;
+        }
+        ranks.set(entry.id, lastRank);
+    });
+
+    return ranks;
 }
 
 function resolveTrackDriverColor(driverEntry, averageRanks, bestLapRanks) {
-    const { driver, rankId } = driverEntry;
-    const backendColor = normalizeDriverColor(driver?.color);
-    if (backendColor !== 'neutral') return backendColor;
-
+    const { rankId } = driverEntry;
     const averageColor = getRankColor(averageRanks.get(rankId));
     const bestLapColor = getRankColor(bestLapRanks.get(rankId));
     const severity = { neutral: 99, red: 3, orange: 2, green: 1 };
