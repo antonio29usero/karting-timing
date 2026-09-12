@@ -256,12 +256,20 @@ function calculateTrackColor(driver, mediaRanking, mejorRanking) {
     const mediaPos = mediaRanking.get(String(driver.dorsal)) ?? null;
     const mejorPos = mejorRanking.get(String(driver.dorsal)) ?? null;
 
-    const isTop7Media = mediaPos !== null && mediaPos <= 7;
-    const isTop7Mejor = mejorPos !== null && mejorPos <= 7;
+    const getPositionBand = (position) => {
+        if (position === null) return 'none';
+        if (position <= 7) return 'top';
+        if (position >= 15) return 'low';
+        if (position >= 8 && position <= 14) return 'mid';
+        return 'none';
+    };
 
-    if (isTop7Media && isTop7Mejor) return 'green';
-    if ((mediaPos !== null && mediaPos >= 15) || (mejorPos !== null && mejorPos >= 15)) return 'red';
-    if ((mediaPos !== null && mediaPos >= 8 && mediaPos <= 14) || (mejorPos !== null && mejorPos >= 8 && mejorPos <= 14)) return 'orange';
+    const mediaBand = getPositionBand(mediaPos);
+    const mejorBand = getPositionBand(mejorPos);
+
+    if (mediaBand === 'top' && mejorBand === 'top') return 'green';
+    if (mediaBand === 'low' || mejorBand === 'low') return 'red';
+    if (mediaBand === 'mid' || mejorBand === 'mid') return 'orange';
     return 'neutral';
 }
 
