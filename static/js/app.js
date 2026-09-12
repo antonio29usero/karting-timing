@@ -248,11 +248,11 @@ function renderDrivers(drivers) {
                 </div>
                 <div class="driver-info">
                     <span class="label">Mejor:</span>
-                    <span class="value">${formatTime(driver.mejor)}</span>
+                    <span class="value">${formatLapTime(driver.mejor)}</span>
                 </div>
                 <div class="driver-info">
                     <span class="label">Media:</span>
-                    <span class="value">${formatTime(driver.media)}</span>
+                    <span class="value">${formatLapTime(driver.media)}</span>
                 </div>
                 <div class="driver-info">
                     <span class="label">Stint:</span>
@@ -290,7 +290,7 @@ function renderPitQueue(queue) {
         if (color === 'red') bgColor = '#cc0000';
         
         html += `<div style="padding:0.4rem 0.6rem;background:${bgColor};border-radius:6px;font-size:0.9rem;">
-            K${car.dorsal} (${car.equipo}) - ${car.tiempo}s
+            K${car.dorsal} (${car.equipo}) - ${formatLapTime(car.tiempo)}
         </div>`;
     });
     html += '</div>';
@@ -319,7 +319,7 @@ function renderBoxes(boxes) {
                     html += `<div class="box-item" style="background:${bgColor};">
                         <strong>${box.dorsal}</strong><br/>
                         ${box.equipo}<br/>
-                        <small>${box.tiempo}s</small>
+                        <small>${formatLapTime(box.tiempo)}</small>
                     </div>`;
                 }
             });
@@ -357,13 +357,13 @@ async function refreshRealpos() {
                     <td><strong>${driver.dorsal}</strong></td>
                     <td>${driver.laps}</td>
                     <td>${driver.laps_real}</td>
-                    <td>${formatTime(driver.race_time)}</td>
-                    <td>${formatTime(driver.pit_excess)}</td>
+                    <td>${formatLapTime(driver.race_time)}</td>
+                    <td>${formatLapTime(driver.pit_excess)}</td>
                     <td>${driver.penalty_seconds > 0 ? '+' + driver.penalty_seconds.toFixed(1) + 's' : '—'}</td>
                     <td>${driver.penalty_laps > 0 ? '+' + driver.penalty_laps : '—'}</td>
-                    <td>${formatTime(driver.time_proj)}</td>
-                    <td>${driver.interval_display}</td>
-                    <td>${driver.gap_display}</td>
+                    <td>${formatLapTime(driver.time_proj)}</td>
+                    <td>${formatGapOrInterval(driver.interval_display)}</td>
+                    <td>${formatGapOrInterval(driver.gap_display)}</td>
                 </tr>
             `;
         });
@@ -373,7 +373,7 @@ async function refreshRealpos() {
         
         const summary = document.getElementById('realpos-summary');
         if (summary && data.config) {
-            summary.innerHTML = `<strong>${data.data.length} drivers | Pit mín: ${data.config.pit_min_effective}s | Paradas: ${data.config.required_pits}</strong>`;
+            summary.innerHTML = `<strong>${data.data.length} drivers | Pit mín: ${formatLapTime(data.config.pit_min_effective)} | Paradas: ${data.config.required_pits}</strong>`;
         }
     } catch (error) {
         console.error('Error refreshRealpos:', error);
@@ -408,7 +408,7 @@ async function refreshSummary() {
                         <td>${driver.pos}</td>
                         <td><strong>${driver.dorsal}</strong></td>
                         <td>${driver.equipo}</td>
-                        <td>${driver.interval_display}</td>
+                        <td>${formatGapOrInterval(driver.interval_display)}</td>
                     </tr>
                 `;
             });
@@ -457,11 +457,77 @@ async function addPenalty() {
 
 // ==================== UTILIDADES ====================
 
-function formatTime(seconds) {
-    if (!seconds || seconds === 0) return '—';
-    const sec = Math.floor(seconds);
-    const ms = Math.floor((seconds - sec) * 1000);
-    return `${sec}:${ms.toString().padStart(3, '0')}`;
+function formatLapTime(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'number' && value === 0) return '—';
+
+    let sign = '';
+    let seconds = value;
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === '—') return '—';
+
+        let raw = trimmed;
+        if (raw.startsWith('+') || raw.startsWith('-')) {
+            sign = raw[0];
+            raw = raw.slice(1).trim();
+        }
+
+        // Ya formateado como MM:SS:MS (acepta 1+ dígitos de minutos para normalizar padding)
+        let match = raw.match(/^(\d+):([0-5]?\d):(\d{1,3})$/);
+        if (match) {
+            const minutes = Number(match[1]);
+            const secs = Number(match[2]);
+            const ms = Number(match[3].padStart(3, '0'));
+            return `${sign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Formato cronometrado habitual MM:SS.mmm o M:SS
+        match = raw.match(/^(\d+):([0-5]?\d)(?:[.,](\d{1,3}))?$/);
+        if (match) {
+            const minutes = Number(match[1]);
+            const secs = Number(match[2]);
+            const ms = Number((match[3] || '0').padEnd(3, '0'));
+            seconds = minutes * 60 + secs + (ms / 1000);
+        } else {
+            const numericValue = raw.replace(/s$/i, '').replace(',', '.').trim();
+            seconds = Number(numericValue);
+            if (!Number.isFinite(seconds)) return '—';
+            if (seconds === 0) return '—';
+        }
+    }
+
+    if (!Number.isFinite(seconds)) return '—';
+
+    const totalMs = Math.round(Math.abs(seconds) * 1000);
+    const minutes = Math.floor(totalMs / 60000);
+    const secs = Math.floor((totalMs % 60000) / 1000);
+    const ms = totalMs % 1000;
+
+    const effectiveSign = sign || (seconds < 0 ? '-' : '');
+    return `${effectiveSign}${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+}
+
+function formatGapOrInterval(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === '—') return '—';
+        if (/^[+-]?\d+\s*(l|lap|laps|v|vuelta|vueltas)$/i.test(trimmed)) {
+            return escapeHtml(trimmed);
+        }
+    }
+    return formatLapTime(value);
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function showAlert(message, type) {
