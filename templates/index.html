@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏁 KARTING - Sistema de Boxes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <h1>🏁 KARTING - Sistema Automático de Boxes</h1>
+            <div class="header-controls">
+                <span id="status" class="status">Desconectado</span>
+                <button onclick="loadConfig()" class="btn btn-small">🔄 Recargar</button>
+                <button onclick="resetAll()" class="btn btn-danger btn-small">⚠️ Reset</button>
+            </div>
+        </header>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('init')">⚙️ Inicio</button>
+            <button class="tab-btn" onclick="switchTab('manual')">📊 Datos Manuales</button>
+            <button class="tab-btn" onclick="switchTab('realpos')">🏆 Posición Real</button>
+            <button class="tab-btn" onclick="switchTab('summary')">📋 Resumen</button>
+            <button class="tab-btn" onclick="switchTab('drivers')">👥 Drivers en Pista</button>
+        </div>
+
+        <!-- TAB: INIT -->
+        <div id="init-tab" class="tab-content active">
+            <div class="card">
+                <h2>Configuración Inicial</h2>
+                <div class="form-group">
+                    <label>Circuito:</label>
+                    <select id="circuit">
+                        <option value="alcanede">ALCANEDE</option>
+                        <option value="santos">SANTOS</option>
+                        <option value="henakart">HENAKART</option>
+                        <option value="kartland">KARTLAND</option>
+                        <option value="kip-palmela">KIP-PALMELA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Modo:</label>
+                    <select id="mode">
+                        <option value="real">Real (WebSocket)</option>
+                        <option value="sim">Simulación</option>
+                        <option value="manual">Manual (Entrada de datos)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Número de Boxes:</label>
+                    <input type="number" id="num_boxes" value="12" min="1" max="30">
+                </div>
+                <div class="form-group">
+                    <label>Vueltas Requeridas:</label>
+                    <input type="number" id="required_pits" value="12" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Tiempo Mínimo Box (seg):</label>
+                    <input type="number" id="pit_min_seconds" value="180" min="0">
+                </div>
+                <button onclick="initServer()" class="btn btn-success">✅ Inicializar</button>
+            </div>
+        </div>
+
+        <!-- TAB: DATOS MANUALES -->
+        <div id="manual-tab" class="tab-content">
+            <div class="card">
+                <h2>Entrada Manual de Datos</h2>
+                
+                <!-- INSERTAR VUELTA -->
+                <div class="section">
+                    <h3>Agregar Vuelta</h3>
+                    <div class="form-group">
+                        <label>Dorsal:</label>
+                        <input type="text" id="manual_dorsal" placeholder="Ej: 42">
+                    </div>
+                    <div class="form-group">
+                        <label>Equipo:</label>
+                        <input type="text" id="manual_equipo" placeholder="Ej: Ferrari">
+                    </div>
+                    <div class="form-group">
+                        <label>Tiempo Vuelta (seg):</label>
+                        <input type="number" id="manual_lap_time" placeholder="Ej: 42.5" step="0.001">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Vueltas:</label>
+                        <input type="number" id="manual_laps_count" placeholder="Ej: 5" min="0">
+                    </div>
+                    <button onclick="addLapManual()" class="btn btn-info">➕ Agregar Vuelta</button>
+                </div>
+
+                <!-- PIT IN / PIT OUT -->
+                <div class="section">
+                    <h3>Control de Boxes</h3>
+                    <div class="form-group">
+                        <label>Dorsal (PIT IN/OUT):</label>
+                        <input type="text" id="pit_control_dorsal" placeholder="Ej: 42">
+                    </div>
+                    <button onclick="pitIn()" class="btn btn-warning">🔴 PIT IN</button>
+                    <button onclick="pitOut()" class="btn btn-success">🟢 PIT OUT</button>
+                </div>
+
+                <!-- PENALIZACIONES -->
+                <div class="section">
+                    <h3>Penalizaciones</h3>
+                    <div class="form-group">
+                        <label>Dorsal:</label>
+                        <input type="text" id="penalty_dorsal" placeholder="Ej: 42">
+                    </div>
+                    <div class="form-group">
+                        <label>Segundos:</label>
+                        <input type="number" id="penalty_seconds" placeholder="Ej: 5" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Vueltas:</label>
+                        <input type="number" id="penalty_laps" placeholder="Ej: 1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Razón:</label>
+                        <input type="text" id="penalty_reason" placeholder="Ej: Infracción de boxes">
+                    </div>
+                    <button onclick="addPenalty()" class="btn btn-danger">⚠️ Agregar Penalización</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: POSICIÓN REAL -->
+        <div id="realpos-tab" class="tab-content">
+            <div class="card">
+                <h2>Posición Real (Clasificación)</h2>
+                <button onclick="refreshRealpos()" class="btn btn-small">🔄 Actualizar</button>
+                <table id="realpos-table" class="table">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Dorsal</th>
+                            <th>Equipo</th>
+                            <th>Vueltas</th>
+                            <th>Tiempo Real</th>
+                            <th>Tiempo Proyectado</th>
+                            <th>Gap</th>
+                            <th>Interval</th>
+                            <th>Pits Done</th>
+                            <th>Penalty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="realpos-tbody">
+                        <tr><td colspan="10" style="text-align:center">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: RESUMEN -->
+        <div id="summary-tab" class="tab-content">
+            <div class="card">
+                <h2>Resumen General</h2>
+                <button onclick="refreshSummary()" class="btn btn-small">🔄 Actualizar</button>
+                
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="label">Circuito:</span>
+                        <span id="summary-circuit" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Total Drivers:</span>
+                        <span id="summary-drivers" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">En Pista:</span>
+                        <span id="summary-pista" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">En Pit:</span>
+                        <span id="summary-pit" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Cola PIT:</span>
+                        <span id="summary-queue" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Líneas WebSocket:</span>
+                        <span id="summary-ws-lines" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Líneas Parseadas:</span>
+                        <span id="summary-ws-parsed" class="value">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Filas Mapeadas:</span>
+                        <span id="summary-mapped" class="value">-</span>
+                    </div>
+                </div>
+
+                <h3>Top 5 Clasificación</h3>
+                <table id="summary-table" class="table">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Dorsal</th>
+                            <th>Equipo</th>
+                            <th>Vueltas</th>
+                            <th>Tiempo</th>
+                            <th>Gap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-tbody">
+                        <tr><td colspan="6" style="text-align:center">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: DRIVERS EN PISTA -->
+        <div id="drivers-tab" class="tab-content">
+            <div class="card">
+                <h2>Drivers en Pista</h2>
+                <button onclick="refreshDrivers()" class="btn btn-small">🔄 Actualizar</button>
+                <div id="drivers-list" class="drivers-grid">
+                    <p style="text-align:center">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
